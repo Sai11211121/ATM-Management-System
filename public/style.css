@@ -1,0 +1,343 @@
+/* Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Poppins',sans-serif;
+}
+
+body{
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+
+    background:
+    radial-gradient(circle at top left,#60a5fa 0%,transparent 40%),
+    radial-gradient(circle at bottom right,#1e3a8a 0%,transparent 40%),
+    linear-gradient(135deg,#020617,#0f172a,#1d4ed8,#38bdf8);
+
+    overflow:hidden;
+
+}
+
+/* Floating glowing circles */
+
+body::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:350px;
+    height:350px;
+
+    background:rgba(255,255,255,.15);
+
+    border-radius:50%;
+
+    top:-120px;
+    left:-120px;
+
+    filter:blur(40px);
+
+    animation:float1 8s ease-in-out infinite;
+
+}
+
+body::after{
+
+    content:"";
+
+    position:absolute;
+
+    width:300px;
+    height:300px;
+
+    background:rgba(255,255,255,.10);
+
+    border-radius:50%;
+
+    bottom:-120px;
+    right:-100px;
+
+    filter:blur(40px);
+
+    animation:float2 10s ease-in-out infinite;
+
+}
+
+/* Glass Card */
+
+.login-box{
+
+    position:relative;
+
+    width:430px;
+
+    padding:35px;
+
+    background:rgba(255,255,255,.15);
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(255,255,255,.3);
+
+    border-radius:25px;
+
+    box-shadow:
+    0 15px 40px rgba(0,0,0,.4),
+    inset 0 1px 2px rgba(255,255,255,.3);
+
+    text-align:center;
+
+    color:white;
+
+    animation:popup .8s ease;
+
+}
+
+/* Decorative shine */
+
+.login-box::before{
+
+    content:"";
+
+    position:absolute;
+
+    top:-50%;
+
+    left:-40%;
+
+    width:80px;
+
+    height:220%;
+
+    background:rgba(255,255,255,.15);
+
+    transform:rotate(25deg);
+
+}
+
+/* Heading */
+
+h1{
+
+    font-size:34px;
+
+    margin-bottom:20px;
+
+    color:#fff;
+
+    text-shadow:0 4px 10px rgba(0,0,0,.4);
+
+}
+
+h2{
+
+    color:#f8fafc;
+
+    margin-bottom:15px;
+
+}
+
+/* Inputs */
+
+input{
+
+    width:100%;
+
+    padding:14px;
+
+    margin:12px 0;
+
+    border:none;
+
+    border-radius:12px;
+
+    outline:none;
+
+    font-size:16px;
+
+    background:rgba(255,255,255,.25);
+
+    color:white;
+
+    transition:.3s;
+
+}
+
+input::placeholder{
+
+    color:#e2e8f0;
+
+}
+
+input:focus{
+
+    background:rgba(255,255,255,.35);
+
+    transform:scale(1.02);
+
+}
+
+/* Buttons */
+
+button{
+
+    width:100%;
+
+    padding:14px;
+
+    margin-top:8px;
+
+    border:none;
+
+    border-radius:12px;
+
+    cursor:pointer;
+
+    font-size:17px;
+
+    font-weight:600;
+
+    color:white;
+
+    background:linear-gradient(90deg,#2563eb,#06b6d4);
+
+    box-shadow:0 8px 20px rgba(0,0,0,.3);
+
+    transition:.35s;
+
+}
+
+button:hover{
+
+    transform:translateY(-3px) scale(1.03);
+
+    background:linear-gradient(90deg,#06b6d4,#2563eb);
+
+    box-shadow:0 12px 25px rgba(37,99,235,.5);
+
+}
+
+button:active{
+
+    transform:scale(.96);
+
+}
+
+a{
+
+    text-decoration:none;
+
+}
+
+/* Balance */
+
+.balance{
+
+    font-size:38px;
+
+    color:#facc15;
+
+    font-weight:bold;
+
+    margin:15px 0;
+
+    text-shadow:0 0 15px gold;
+
+}
+
+/* Table */
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    margin-top:20px;
+
+    color:white;
+
+}
+
+th{
+
+    background:#1e40af;
+
+    padding:12px;
+
+}
+
+td{
+
+    background:rgba(255,255,255,.15);
+
+    padding:10px;
+
+}
+
+tr:hover{
+
+    background:rgba(255,255,255,.25);
+
+}
+
+/* Animations */
+
+@keyframes popup{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(40px) scale(.8);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0) scale(1);
+
+    }
+
+}
+
+@keyframes float1{
+
+    0%,100%{
+
+        transform:translateY(0);
+
+    }
+
+    50%{
+
+        transform:translateY(30px);
+
+    }
+
+}
+
+@keyframes float2{
+
+    0%,100%{
+
+        transform:translateY(0);
+
+    }
+
+    50%{
+
+        transform:translateY(-30px);
+
+    }
+
+}
