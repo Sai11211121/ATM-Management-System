@@ -1,21 +1,23 @@
 const express = require("express");
-const oracledb = require("oracledb");
+const mongoose = require("mongoose");
+require("dotenv").config();
 const path = require("path");
+const Customer = require("./models/Customer");
+const Transaction = require("./models/Transaction");
 
-oracledb.initOracleClient({
-    libDir: "C:\\Users\\kasam\\OneDrive\\Desktop\\sem 3\\sem 3\\oracle\\instantclient_23_0"
-});
 
 const app = express();
-
+mongoose.connect(process.env.MONGODB_URI)
+.then(() => {
+    console.log("✅ MongoDB Connected");
+})
+.catch((err) => {
+    console.log(err);
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-const dbConfig = {
-    user: "SYSTEM",
-    password: "SNSu1121",
-    connectString: "localhost:1521/XE"
-};
+
 
 // Store logged in account
 let currentAccount = null;
@@ -26,41 +28,26 @@ app.post("/login", async (req, res) => {
 
     const { account_no, pin } = req.body;
 
-    let connection;
-
     try {
 
-        connection = await oracledb.getConnection(dbConfig);
+        const customer = await Customer.findOne({
+            account_no: Number(account_no),
+            pin: pin
+        });
 
-        const result = await connection.execute(
-            `SELECT account_no,name
-             FROM customers
-             WHERE account_no=:1
-             AND pin=:2`,
-            [account_no, pin]
-        );
-
-        if (result.rows.length > 0) {
-
-            currentAccount = account_no;
-
-            res.sendFile(path.join(__dirname, "public", "dashboard.html"));
-
-        } else {
-
-            res.send("<h2>Invalid Account Number or PIN</h2>");
-
+        if (!customer) {
+            return res.send("<h2>Invalid Account Number or PIN</h2>");
         }
 
-    } catch (err) {
+        currentAccount = customer.account_no;
+
+        res.sendFile(path.join(__dirname, "public", "dashboard.html"));
+
+    }
+    catch (err) {
 
         console.log(err);
         res.send("Database Error");
-
-    } finally {
-
-        if (connection)
-            await connection.close();
 
     }
 
@@ -68,29 +55,19 @@ app.post("/login", async (req, res) => {
 
 // ================= BALANCE =================
 
-app.get("/balance", async (req, res) => {
+// ================= BALANCE =================
 
-    let connection;
+app.get("/balance", async (req, res) => {
 
     try {
 
-        connection = await oracledb.getConnection(dbConfig);
+        const customer = await Customer.findOne({
+            account_no: currentAccount
+        });
 
-        const result = await connection.execute(
-            `SELECT balance
-             FROM customers
-             WHERE account_no=:1`,
-            [currentAccount]
-        );
-
-        if (result.rows.length == 0) {
-
-            res.send("Account Not Found");
-            return;
-
+        if (!customer) {
+            return res.send("<h2>Account Not Found</h2>");
         }
-
-        const balance = result.rows[0][0];
 
         res.send(`
 <!DOCTYPE html>
@@ -113,7 +90,7 @@ app.get("/balance", async (req, res) => {
 
 <h2>Your Balance</h2>
 
-<h1>₹ ${balance}</h1>
+<h1>₹ ${customer.balance}</h1>
 
 <br>
 
@@ -133,20 +110,15 @@ app.get("/balance", async (req, res) => {
         console.log(err);
         res.send("Database Error");
 
-    } finally {
-
-        if (connection)
-            await connection.close();
-
     }
 
 });
 
 // ================= DEPOSIT =================
 
-app.post("/deposit", async (req, res) => {
+// ================= DEPOSIT =================
 
-    let connection;
+app.post("/deposit", async (req, res) => {
 
     try {
 
@@ -156,47 +128,23 @@ app.post("/deposit", async (req, res) => {
             return res.send("<h2>Enter a valid amount.</h2>");
         }
 
-        connection = await oracledb.getConnection(dbConfig);
+        const customer = await Customer.findOne({
+            account_no: currentAccount
+        });
 
-        // Get current balance
-        const result = await connection.execute(
-            `SELECT balance
-             FROM customers
-             WHERE account_no = :1`,
-            [currentAccount]
-        );
-
-        if (result.rows.length === 0) {
+        if (!customer) {
             return res.send("<h2>Account Not Found</h2>");
         }
 
-        let balance = result.rows[0][0];
+        customer.balance += amount;
+        await customer.save();
 
-        balance = balance + amount;
-
-        // Update balance
-        await connection.execute(
-            `UPDATE customers
-             SET balance = :1
-             WHERE account_no = :2`,
-            [balance, currentAccount]
-        );
-
-        // Insert transaction
-        await connection.execute(
-            `INSERT INTO transactions
-            VALUES(
-                transaction_seq.NEXTVAL,
-                :1,
-                'DEPOSIT',
-                :2,
-                :3,
-                SYSDATE
-            )`,
-            [currentAccount, amount, balance]
-        );
-
-        await connection.commit();
+        await Transaction.create({
+            account_no: currentAccount,
+            transaction_type: "DEPOSIT",
+            amount: amount,
+            balance_after: customer.balance
+        });
 
         res.send(`
 <!DOCTYPE html>
@@ -216,7 +164,7 @@ app.post("/deposit", async (req, res) => {
 
 <h3>Amount Deposited: ₹${amount}</h3>
 
-<h3>Current Balance: ₹${balance}</h3>
+<h3>Current Balance: ₹${customer.balance}</h3>
 
 <br>
 
@@ -235,19 +183,14 @@ app.post("/deposit", async (req, res) => {
         console.log(err);
         res.send("Database Error");
 
-    } finally {
-
-        if (connection)
-            await connection.close();
-
     }
 
 });
 // ================= WITHDRAW =================
 
-app.post("/withdraw", async (req, res) => {
 
-    let connection;
+
+app.post("/withdraw", async (req, res) => {
 
     try {
 
@@ -257,48 +200,28 @@ app.post("/withdraw", async (req, res) => {
             return res.send("<h2>Enter a valid amount.</h2>");
         }
 
-        connection = await oracledb.getConnection(dbConfig);
+        const customer = await Customer.findOne({
+            account_no: currentAccount
+        });
 
-        const result = await connection.execute(
-            `SELECT balance
-             FROM customers
-             WHERE account_no = :1`,
-            [currentAccount]
-        );
-
-        if (result.rows.length === 0) {
+        if (!customer) {
             return res.send("<h2>Account Not Found</h2>");
         }
 
-        let balance = result.rows[0][0];
-
-        if (balance < amount) {
+        if (customer.balance < amount) {
             return res.send("<h2>Insufficient Balance</h2><br><a href='/dashboard.html'><button>Back</button></a>");
         }
 
-        balance = balance - amount;
+        customer.balance -= amount;
 
-        await connection.execute(
-            `UPDATE customers
-             SET balance = :1
-             WHERE account_no = :2`,
-            [balance, currentAccount]
-        );
+        await customer.save();
 
-        await connection.execute(
-            `INSERT INTO transactions
-            VALUES(
-                transaction_seq.NEXTVAL,
-                :1,
-                'WITHDRAW',
-                :2,
-                :3,
-                SYSDATE
-            )`,
-            [currentAccount, amount, balance]
-        );
-
-        await connection.commit();
+        await Transaction.create({
+            account_no: currentAccount,
+            transaction_type: "WITHDRAW",
+            amount: amount,
+            balance_after: customer.balance
+        });
 
         res.send(`
 <!DOCTYPE html>
@@ -318,7 +241,7 @@ app.post("/withdraw", async (req, res) => {
 
 <h3>Withdrawn ₹${amount}</h3>
 
-<h3>Current Balance ₹${balance}</h3>
+<h3>Current Balance ₹${customer.balance}</h3>
 
 <br>
 
@@ -337,47 +260,33 @@ app.post("/withdraw", async (req, res) => {
         console.log(err);
         res.send("Database Error");
 
-    } finally {
-
-        if (connection)
-            await connection.close();
-
     }
 
 });
 // ================= MINI STATEMENT =================
 
-app.get("/statement", async (req, res) => {
+// ================= MINI STATEMENT =================
 
-    let connection;
+app.get("/statement", async (req, res) => {
 
     try {
 
-        connection = await oracledb.getConnection(dbConfig);
-
-        const result = await connection.execute(
-            `SELECT transaction_type,
-                    amount,
-                    balance_after,
-                    TO_CHAR(transaction_date,'DD-MON-YYYY HH24:MI')
-             FROM transactions
-             WHERE account_no = :1
-             ORDER BY transaction_id DESC`,
-            [currentAccount]
-        );
+        const transactions = await Transaction.find({
+            account_no: currentAccount
+        }).sort({ transaction_date: -1 });
 
         let rows = "";
 
-        for (let row of result.rows) {
+        transactions.forEach((t) => {
 
             rows += `
             <tr>
-                <td>${row[0]}</td>
-                <td>₹${row[1]}</td>
-                <td>₹${row[2]}</td>
-                <td>${row[3]}</td>
+                <td>${t.transaction_type}</td>
+                <td>₹${t.amount}</td>
+                <td>₹${t.balance_after}</td>
+                <td>${new Date(t.transaction_date).toLocaleString()}</td>
             </tr>`;
-        }
+        });
 
         res.send(`
 <!DOCTYPE html>
@@ -435,11 +344,6 @@ ${rows}
 
         console.log(err);
         res.send("Database Error");
-
-    } finally {
-
-        if (connection)
-            await connection.close();
 
     }
 
